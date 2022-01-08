@@ -19,6 +19,8 @@ from litex.soc.cores.clock import *
 from litex.soc.integration.soc_core import *
 from litex.soc.integration.builder import *
 from litex.soc.cores.led import LedChaser
+from litex.soc.cores.gpio import GPIOIn
+from litex.soc.cores.xadc import XADC
 
 from litedram.modules import MT41J128M16
 from litedram.phy import s7ddrphy
@@ -97,6 +99,8 @@ def main():
     parser.add_argument("--load",          action="store_true", help="Load bitstream.")
     parser.add_argument("--sys-clk-freq",  default=100e6,       help="System clock frequency.")
     parser.add_argument("--with-ethernet", action="store_true", help="Enable Ethernet support.")
+    parser.add_argument("--with-switches", action="store_true", help="Enable Switches support")
+    parser.add_argument("--with-xadc",     action="store_true", help="Enable XADC support")
     builder_args(parser)
     soc_core_args(parser)
     vivado_build_args(parser)
@@ -107,6 +111,11 @@ def main():
         with_ethernet = args.with_ethernet,
         **soc_core_argdict(args)
     )
+    if args.with_switches:
+        soc.submodules.switches = GPIOIn(Cat(soc.platform.request_all("user_sw")), with_irq=True)
+        soc.add_interrupt("switches")
+    if args.with_xadc:
+        soc.submodules.xadc = XADC()
     builder = Builder(soc, **builder_argdict(args))
     builder.build(**vivado_build_argdict(args), run=args.build)
 
