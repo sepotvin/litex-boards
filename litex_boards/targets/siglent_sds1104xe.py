@@ -74,8 +74,7 @@ class BaseSoC(SoCCore):
         if kwargs.get("uart_name", "serial") == "serial":
             kwargs["uart_name"] = "crossover" # Defaults to Crossover UART.
         SoCCore.__init__(self, platform, sys_clk_freq,
-            ident          = "LiteX SoC on Siglent SDS1104X-E",
-            ident_version  = True,
+            ident = "LiteX SoC on Siglent SDS1104X-E",
             **kwargs)
 
         # CRG --------------------------------------------------------------------------------------
@@ -88,10 +87,9 @@ class BaseSoC(SoCCore):
                 nphases        = 4,
                 sys_clk_freq   = sys_clk_freq)
             self.add_sdram("sdram",
-                phy              = self.ddrphy,
-                module           = MT41K64M16(sys_clk_freq, "1:4"),
-                l2_cache_size    = kwargs.get("l2_size", 8192),
-                l2_cache_reverse = False,
+                phy           = self.ddrphy,
+                module        = MT41K64M16(sys_clk_freq, "1:4"),
+                l2_cache_size = kwargs.get("l2_size", 8192)
             )
 
         # Etherbone --------------------------------------------------------------------------------

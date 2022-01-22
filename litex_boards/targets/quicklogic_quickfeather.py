@@ -14,7 +14,7 @@ from migen import *
 
 from litex_boards.platforms import quicklogic_quickfeather
 
-from litex.soc.cores.clock import *
+from litex.soc.integration.soc import SoCRegion
 from litex.soc.integration.soc_core import *
 from litex.soc.integration.builder import *
 from litex.soc.cores.led import LedChaser
@@ -50,15 +50,30 @@ class BaseSoC(SoCCore):
         platform = quicklogic_quickfeather.Platform()
 
         # SoCCore ----------------------------------------------------------------------------------
-        kwargs["cpu_type"] = kwargs.get("cpu_type", None)
         kwargs["with_uart"] = False
+        if kwargs.get("cpu_type", None) == "eos_s3":
+            kwargs['integrated_sram_size'] = 0
+
         SoCCore.__init__(self, platform, sys_clk_freq,
-            ident          = "LiteX SoC on QuickLogic QuickFeather",
-            ident_version  = True,
+            ident = "LiteX SoC on QuickLogic QuickFeather",
             **kwargs)
 
+        if kwargs.get("cpu_type", None) == "eos_s3":
+            # in fact SRAM starts at 0x2000_0000 - but for some reason
+            # this does not work and most QORC SDK linker scripts
+            # use 0x2002_7000 + 0x0003_c800
+            self.bus.add_region("sram", SoCRegion(
+                origin=0x2002_7000,
+                size=0x0003_c800)
+            )
+            self.bus.add_region("rom", SoCRegion(
+                origin=self.mem_map["rom"],
+                size=4 * 128 * 1024,
+                linker=True)
+            )
+
         # CRG --------------------------------------------------------------------------------------
-        self.submodules.crg = _CRG(platform, with_eos_s3=kwargs["cpu_type"] == "eos-s3")
+        self.submodules.crg = _CRG(platform, with_eos_s3=kwargs["cpu_type"] == "eos_s3")
 
         # Leds -------------------------------------------------------------------------------------
         if with_led_chaser:
@@ -69,20 +84,29 @@ class BaseSoC(SoCCore):
         # GPIOIn (Interrupt test) ------------------------------------------------------------------
         if with_gpio_in:
             self.submodules.gpio = GPIOIn(platform.request_all("user_btn_n"), with_irq=True)
-            if kwargs["cpu_type"] == "eos-s3":
+            if kwargs["cpu_type"] == "eos_s3":
                 self.irq.add("gpio", use_loc_if_exists=True)
 
 # Build --------------------------------------------------------------------------------------------
 
 def main():
-    parser = argparse.ArgumentParser(description="LiteX SoC on Quicklogic QuickFeather")
+    parser = argparse.ArgumentParser(description="LiteX SoC on QuickLogic QuickFeather")
     parser.add_argument("--build", action="store_true", help="Build bitstream.")
     soc_core_args(parser)
+    parser.set_defaults(cpu_type="eos_s3")
     args = parser.parse_args()
 
     soc = BaseSoC(**soc_core_argdict(args))
-    builder = Builder(soc, compile_software=False)
+    builder = Builder(soc)
+    if args.cpu_type == "eos_s3":
+        libeos_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "libeos")
+        if not os.path.exists(libeos_path):
+            os.system("wget -nc https://github.com/litex-hub/litex-boards/files/7880350/libeos.zip")
+            os.system(f"unzip libeos.zip -d {libeos_path}")
+        builder.add_software_package("libeos", src_dir=libeos_path)
+        builder.add_software_library("libeos")
     builder.build(run=args.build)
+
 
 if __name__ == "__main__":
     main()

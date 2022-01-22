@@ -134,12 +134,11 @@ class BaseSoC(SoCCore):
 
         # SoCCore ----------------------------------------------------------------------------------
         SoCCore.__init__(self, platform, int(sys_clk_freq),
-            ident          = "LiteX SoC on Colorlight " + board.upper(),
-            ident_version  = True,
+            ident = "LiteX SoC on Colorlight " + board.upper(),
             **kwargs)
 
         # CRG --------------------------------------------------------------------------------------
-        with_rst = kwargs["uart_name"] not in ["serial", "bridge"] # serial_rx shared with user_btn_n.
+        with_rst = kwargs["uart_name"] not in ["serial", "crossover"] # serial_rx shared with user_btn_n.
         with_usb_pll = kwargs.get("uart_name", None) == "usb_acm"
         self.submodules.crg = _CRG(platform, sys_clk_freq, use_internal_osc=use_internal_osc, with_usb_pll=with_usb_pll,with_rst=with_rst, sdram_rate=sdram_rate)
 
@@ -184,7 +183,7 @@ def main():
     parser.add_argument("--build",             action="store_true",              help="Build bitstream.")
     parser.add_argument("--load",              action="store_true",              help="Load bitstream.")
     parser.add_argument("--board",             default="5a-75b",                 help="Board type (5a-75b or 5a-75e).")
-    parser.add_argument("--revision",          default="7.0", type=str,          help="Board revision (7.0, 6.0 or 6.1).")
+    parser.add_argument("--revision",          default="7.0", type=str,          help="Board revision (6.0, 6.1, 7.0 or 8.0).")
     parser.add_argument("--sys-clk-freq",      default=60e6,                     help="System clock frequency")
     ethopts = parser.add_mutually_exclusive_group()
     ethopts.add_argument("--with-ethernet",    action="store_true",              help="Enable Ethernet support.")

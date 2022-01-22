@@ -32,26 +32,19 @@ mB = 1024*kB
 class _CRG(Module):
     def __init__(self, platform, sys_clk_freq):
         self.rst = Signal()
-        self.cpu_reset = Signal()
-
-        self.clock_domains.cd_sys       = ClockDomain()
-        self.clock_domains.cd_sys4x     = ClockDomain(reset_less=True)
-        self.clock_domains.cd_sys4x_dqs = ClockDomain(reset_less=True)
+        self.clock_domains.cd_sys = ClockDomain()
 
         # # #
 
-        plls_clk12 = platform.request("clk12")
-        rst_n  = platform.request("cpu_reset")
-        self.comb += self.cpu_reset.eq(rst_n)
+        # Clk/Rst.
+        clk12 = platform.request("clk12")
+        rst   = platform.request("cpu_reset")
 
+        # PLL.
         self.submodules.pll = pll = S7MMCM(speedgrade=-1)
-        self.comb += pll.reset.eq(self.cpu_reset | self.rst)
-
-        pll.register_clkin(plls_clk12, 12e6)
-        pll.create_clkout(self.cd_sys,       sys_clk_freq)
-        pll.create_clkout(self.cd_sys4x,     4*sys_clk_freq)
-        pll.create_clkout(self.cd_sys4x_dqs, 4*sys_clk_freq, phase=90)
-
+        self.comb += pll.reset.eq(rst | self.rst)
+        pll.register_clkin(clk12, 12e6)
+        pll.create_clkout(self.cd_sys, sys_clk_freq)
         platform.add_false_path_constraints(self.cd_sys.clk, pll.clkin) # Ignore sys_clk to pll.clkin path created by SoC's rst.
 
 # AsyncSRAM ------------------------------------------------------------------------------------------
@@ -113,24 +106,19 @@ def addAsyncSram(soc, platform, name, origin, size):
 
 class BaseSoC(SoCCore):
     def __init__(self,  variant="a7-35",
-                 toolchain="vivado",
-                 sys_clk_freq=int(100e6),
-                 with_led_chaser=True,
-                 ident_version=True, 
-                 with_jtagbone=True, 
-                 with_mapped_flash=False, 
-                 **kwargs):
+        toolchain       = "vivado",
+        sys_clk_freq    = int(100e6),
+        with_led_chaser = True,
+        **kwargs):
 
-        platform = digilent_cmod_a7.Platform()
+        platform = digilent_cmod_a7.Platform(variant=variant, toolchain=toolchain)
 
         # SoCCore ----------------------------------------------------------------------------------
         SoCCore.__init__(self, platform, sys_clk_freq,
-            ident          = "LiteX SoC on Digilent CmodA7",
-            ident_version  = True,
+            ident = "LiteX SoC on Digilent CmodA7",
             **kwargs)
 
         # CRG --------------------------------------------------------------------------------------
-
         self.submodules.crg = _CRG(platform, sys_clk_freq)
 
         addAsyncSram(self,platform,"main_ram",0x40000000,512*1024)        
@@ -144,7 +132,7 @@ class BaseSoC(SoCCore):
 # Build --------------------------------------------------------------------------------------------
 
 def main():
-    parser = argparse.ArgumentParser(description="LiteX SoC on Arty A7")
+    parser = argparse.ArgumentParser(description="LiteX SoC on CMOD A7")
     parser.add_argument("--toolchain",    default="vivado",    help="FPGA toolchain (vivado or symbiflow).")
     parser.add_argument("--build",        action="store_true", help="Build bitstream.")
     parser.add_argument("--load",         action="store_true", help="Load bitstream.")
@@ -167,7 +155,12 @@ def main():
 
     builder = Builder(soc, **builder_argd)
     builder_kwargs = vivado_build_argdict(args) if args.toolchain == "vivado" else {}
+
     builder.build(**builder_kwargs, run=args.build)
+
+    if args.load:
+        prog = soc.platform.create_programmer()
+        prog.load_bitstream(os.path.join(builder.gateware_dir, soc.build_name + ".bit"))
 
 if __name__ == "__main__":
     main()

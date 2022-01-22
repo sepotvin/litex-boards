@@ -74,8 +74,7 @@ class BaseSoC(SoCCore):
 
         # SoCCore ----------------------------------------------------------------------------------
         SoCCore.__init__(self, platform, sys_clk_freq,
-            ident          = "LiteX SoC on MiniSpartan6",
-            ident_version  = True,
+            ident = "LiteX SoC on MiniSpartan6",
             **kwargs)
 
         # CRG --------------------------------------------------------------------------------------
@@ -86,10 +85,9 @@ class BaseSoC(SoCCore):
             sdrphy_cls = HalfRateGENSDRPHY if sdram_rate == "1:2" else GENSDRPHY
             self.submodules.sdrphy = sdrphy_cls(platform.request("sdram"), sys_clk_freq)
             self.add_sdram("sdram",
-                phy              = self.sdrphy,
-                module           = AS4C16M16(sys_clk_freq, sdram_rate),
-                l2_cache_size    = kwargs.get("l2_size", 8192),
-                l2_cache_reverse = False
+                phy           = self.sdrphy,
+                module        = AS4C16M16(sys_clk_freq, sdram_rate),
+                l2_cache_size = kwargs.get("l2_size", 8192)
             )
 
         # Video ------------------------------------------------------------------------------------

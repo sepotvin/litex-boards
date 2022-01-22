@@ -11,7 +11,7 @@
 #
 # Use:
 # litex_server --jtag --jtag-config=openocd_xc7_ft232.cfg
-# litex_term bridge
+# litex_term crossover
 
 import os
 import argparse
@@ -65,8 +65,7 @@ class BaseSoC(SoCCore):
         # SoCCore ----------------------------------------------------------------------------------
         kwargs["uart_name"] = "crossover"
         SoCCore.__init__(self, platform, sys_clk_freq,
-            ident          = "LiteX SoC on Blackmagic Decklink Quad HDMI Recorder",
-            ident_version  = True,
+            ident = "LiteX SoC on Blackmagic Decklink Quad HDMI Recorder",
             **kwargs)
 
         # CRG --------------------------------------------------------------------------------------
